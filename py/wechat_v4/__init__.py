@@ -1,3 +1,2 @@
-from .extractor import extract_keys
-
-__all__ = ["extract_keys"]
+# Package initializer. Do not import submodules here to avoid circular imports.
+__all__: list[str] = []
