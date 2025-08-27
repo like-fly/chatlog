@@ -13,7 +13,7 @@ _V4_DATA_PATTERNS = [
     (b"\x20fts5(%\x00", [16, -80, 64]),
 ]
 _V4_IMG_ZERO16 = b"\x00" * 16
-_V4_IMG_OFFSETS = [-32]
+_V4_IMG_OFFSETS = [-32]  # Restore to original single offset
 
 
 def _search_data_key_block_mac(memory: bytes, db_validator: Optional[DBValidator], processed_hex: Set[str]) -> Optional[str]:
@@ -105,8 +105,16 @@ def extract_keys() -> Tuple[Optional[str], Optional[str]]:
     img_hex: Optional[str] = None
 
     try:
-        # Use the same logic for both platforms - simple region-by-region search
-        for base, size, _ in ms.enum_regions(h):
+        # Use optimized region-by-region search
+        regions_processed = 0
+        max_regions = 70  # Slightly reduce since keys found at 55
+        
+        for base, size, prot in ms.enum_regions(h):
+            regions_processed += 1
+            if regions_processed > max_regions:
+                print(f"Warning: Stopped after processing {max_regions} memory regions")
+                break
+                
             block = ms.read_memory(h, base, size)
             if not block:
                 continue
@@ -129,20 +137,34 @@ def extract_keys() -> Tuple[Optional[str], Optional[str]]:
                         img_hex = found_img
                         
             else:
-                # Windows: Use pointer-chasing search
+                # Windows: Use pointer-chasing search with early stopping
+                keys_found_in_region = 0
+                max_keys_per_region = 100  # Allow more keys per region
+                
                 for ptr in ms.search_keys_in_region(block):
+                    keys_found_in_region += 1
+                    if keys_found_in_region > max_keys_per_region:
+                        break
+                        
                     key_bytes = ms.read_key_bytes(h, ptr, 32)
                     if not key_bytes:
                         continue
                     # DB key check (32 bytes)
                     if not data_hex and db_validator and db_validator.validate_db_key(key_bytes):
                         data_hex = binascii.hexlify(key_bytes).decode()
+                        print(f"Data key found in region {regions_processed}")
                     # Image key check (first 16 bytes)
                     if not img_hex and img_validator and img_validator.validate_img_key(key_bytes[:16]):
                         img_hex = binascii.hexlify(key_bytes[:16]).decode()
+                        print(f"Image key found via pointer search in region {regions_processed}")
                         
-            # Check if both keys found
+                    # Early exit if both keys found
+                    if data_hex and img_hex:
+                        break
+                        
+            # Check if both keys found - early exit
             if data_hex and img_hex:
+                print(f"Both keys found after processing {regions_processed} regions")
                 return data_hex, img_hex
                 
         return data_hex, img_hex

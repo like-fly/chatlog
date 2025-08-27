@@ -96,12 +96,20 @@ class WindowsMemoryAPI:
             region_size = int(mbi.RegionSize)
             base_addr = self._voidp_to_int(mbi.BaseAddress)
             
-            # Skip small regions (<1MB)
-            if (region_size >= 1024 * 1024 and 
+            # Skip small regions (<1MB) and very large regions (>512MB) for performance
+            if (region_size >= 1024 * 1024 and region_size <= 512 * 1024 * 1024 and
                 mbi.State == self.MEM_COMMIT and 
                 (mbi.Protect & self.PAGE_READWRITE) and 
                 mbi.Type == self.MEM_PRIVATE):
-                yield (base_addr, region_size, int(mbi.Protect))
+                # Limit individual chunks to 64MB to match earlier working version
+                max_chunk_size = 64 * 1024 * 1024
+                if region_size <= max_chunk_size:
+                    yield (base_addr, region_size, int(mbi.Protect))
+                else:
+                    # Split large regions into smaller chunks (max 3 chunks per region)
+                    for chunk_start in range(0, min(region_size, 3 * max_chunk_size), max_chunk_size):
+                        chunk_size = min(max_chunk_size, region_size - chunk_start)
+                        yield (base_addr + chunk_start, chunk_size, int(mbi.Protect))
                 
             # Advance to next region
             next_addr = base_addr + region_size
@@ -330,8 +338,21 @@ def read_memory(handle: int, base: int, size: int) -> Optional[bytes]:
 
 def search_keys_in_region(block: bytes) -> Iterator[int]:
     """Search for key patterns in a memory block (Windows V4 pointer scan)."""
-    # Search from end like Go code
-    idx = len(block)
+    # Early exit if block is too small
+    if len(block) < len(KEY_PATTERN) + 8:
+        return
+        
+    # Search from end like Go code, but with optimizations
+    block_len = len(block)
+    pattern_len = len(KEY_PATTERN)
+    
+    # Pre-calculate to avoid repeated calculations
+    min_ptr = 0x10000
+    max_ptr = 0x7FFFFFFFFFFF
+    found_ptrs = set()  # Avoid duplicate pointers
+    
+    # Simple search from end like Go code - restore original logic
+    idx = block_len
     while True:
         idx = block.rfind(KEY_PATTERN, 0, idx)
         if idx == -1 or idx - 8 < 0:
