@@ -1,0 +1,12 @@
+# 微信 v4 消息解析模块依赖包
+# 运行: pip install -r requirements_v4.txt
+
+# 核心依赖
+protobuf>=4.21.0
+
+# 可选依赖 (用于解压缩)
+zstandard>=0.19.0
+
+# 开发依赖 (可选)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0

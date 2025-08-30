@@ -3,6 +3,7 @@ import platform
 from typing import Optional, Tuple, Set
 
 from .process_detector import find_wechat_v4_processes
+from .process_detector import WeChatProcess
 from . import memory_scanner as ms  # use package-level alias for fallback
 from .validator import DBValidator, ImgKeyValidator
 
@@ -81,12 +82,18 @@ def _search_img_key_block_mac(memory: bytes, img_validator: Optional[ImgKeyValid
     return None
 
 
-def extract_keys() -> Tuple[Optional[str], Optional[str]]:
-    procs = find_wechat_v4_processes()
-    if not procs:
-        return None, None
-    # Use the first online process with data_dir
-    proc = next((p for p in procs if p.status == 'online' and p.data_dir), procs[0])
+def extract_keys(proc: WeChatProcess) -> Tuple[Optional[str], Optional[str]]:
+    # procs = find_wechat_v4_processes()
+    # if not procs:
+    #     return None, None
+    # # Use the first online process with data_dir
+    # proc = next((p for p in procs if p.status == 'online' and p.data_dir), procs[0])
+
+    print(f"Found WeChat process: PID={proc.pid}")
+    print(f"Full Version: {proc.full_version}")
+    print(f"DataDir={proc.data_dir}")
+    print(f"AccountName={proc.account_name}")
+        
 
     db_validator: Optional[DBValidator] = None
     img_validator: Optional[ImgKeyValidator] = None

@@ -20,7 +20,7 @@ def test_single_file():
     # Initialize converter with keys
     converter = WeChatDatConverter(
         aes_key="32666261386464653536643364353161",
-        xor_key=0x37
+        xor_key=0xaf  # Use the correct detected XOR key
     )
     
     # Test file from user's example
@@ -61,7 +61,7 @@ def test_batch_conversion():
     # Initialize converter
     converter = WeChatDatConverter(
         aes_key="32666261386464653536643364353161",
-        xor_key=0x37
+        xor_key=0xaf  # Use the correct detected XOR key
     )
     
     # Test directory (subset of user's directory)
@@ -161,7 +161,7 @@ def test_api_comparison():
     try:
         converter = WeChatDatConverter(
             aes_key="32666261386464653536643364353161",
-            xor_key=0x37
+            xor_key=0xaf  # Use the correct detected XOR key
         )
         new_result, new_ext = converter.convert(data)
         print(f"  Result: {len(new_result)} bytes, extension: {new_ext}")

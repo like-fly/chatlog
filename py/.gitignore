@@ -6,3 +6,5 @@ venv/
 env/
 instance/
 .pytest_cache/
+build/
+dist/
