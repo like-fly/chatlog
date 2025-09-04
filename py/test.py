@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
         # 提取耗时
         start = time.perf_counter()
-        data_key, img_key = extract_keys()
+        data_key, img_key = extract_keys(proc)
         elapsed = time.perf_counter() - start
         print(f"extract_keys 耗时: {elapsed:.2f}s")
         print("Data Key:", data_key)
